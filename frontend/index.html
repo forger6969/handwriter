@@ -6,7 +6,7 @@
 <title>Рукописный лист</title>
 <meta name="description" content="Печатаешь текст — получаешь картинку рукописного конспекта на тетрадном или А4 листе с реальными пропорциями, готовую к скачиванию.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Neucha&family=Marck+Script&family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Neucha&family=Marck+Script&family=Comforter&family=Comforter+Brush&family=Manrope:wght@400;500;600;700;800&display=swap">
 <style>
   :root {
     --bg: #eef1f6;
@@ -298,6 +298,8 @@
       <select id="font-select">
         <option value="Neucha">Школьный (Neucha)</option>
         <option value="'Marck Script'">Аккуратный (Marck Script)</option>
+        <option value="Comforter">Небрежный (Comforter)</option>
+        <option value="'Comforter Brush'">Быстрый, размашистый (Comforter Brush)</option>
       </select>
     </div>
 
@@ -318,8 +320,8 @@
       </div>
       <div class="field">
         <label>Небрежность</label>
-        <input type="range" id="jitter-range" min="0" max="100" value="45">
-        <div class="range-val"><span>ровно</span><span id="jitter-val">45%</span></div>
+        <input type="range" id="jitter-range" min="0" max="100" value="60">
+        <div class="range-val"><span>ровно</span><span id="jitter-val">60%</span></div>
       </div>
     </div>
 
@@ -366,7 +368,7 @@
     font: "Neucha",
     ink: "blue",
     sizePct: 100,
-    jitterPct: 45
+    jitterPct: 60
   };
 
   var DEFAULT_TEXT = "ЛАБОРАТОРНАЯ РАБОТА № 5\n\n1. Тема\nОпределение отношения теплоёмкостей газа Cp/Cv методом Клемана-Дезорма.\n\n2. Цель работы\nИзучение первого закона термодинамики, внутренней энергии газа и её выражения; ознакомление с удельной и молярной теплоёмкостями; экспериментальное определение коэффициента Пуассона для воздуха методом Клемана-Дезорма и сравнение полученного значения с теоретическим.\n\n3. Основные теоретические сведения\nСовокупность изучаемых тел называют системой. Идеальным газом называется газ, молекулы которого не взаимодействуют друг с другом. Состояние газа характеризуется тремя параметрами: давлением P, объёмом V и температурой T.";
@@ -518,9 +520,22 @@
   function jitterAmounts() {
     var f = state.jitterPct / 100;
     return {
-      angleDeg: f * 2.6,
-      yPx: f * 3.2 * pxPerMm / 3,
-      shrink: f * 0.05
+      // шаги случайного блуждания — не независимый шум на каждый символ,
+      // а сглаженный дрейф (как у живой руки), см. makeDrifter()
+      angleStepDeg: f * 3.2,
+      yStepPx: f * 0.9 * pxPerMm,
+      sizeJitter: 0.03 + f * 0.07,
+      kerningJitterPx: 0.15 * pxPerMm * (0.3 + f)
+    };
+  }
+
+  // AR(1)-блуждание: коррелированный дрейф вместо независимого шума на
+  // каждый символ — соседние буквы "тянутся" друг за другом, как перо.
+  function makeDrifter(step, decay) {
+    var v = 0;
+    return function () {
+      v = v * decay + (Math.random() - 0.5) * step;
+      return v;
     };
   }
 
@@ -576,29 +591,46 @@
     var ctx = canvas.getContext("2d");
     drawBackground(ctx, geo);
 
-    ctx.font = fontSizePx + "px " + state.font;
     ctx.textBaseline = "alphabetic";
 
     var jit = jitterAmounts();
     var baseColor = inkColor();
     var y = geo.topPx + fontSizePx * 0.78;
+    var spaceWidthBase = fontSizePx * 0.28;
 
     pageLines.forEach(function (words) {
       if (words.length === 0) { y += geo.lineStepPx; return; }
+
+      // Новый дрейф на каждую строку — перо чуть иначе "плывёт" от строки
+      // к строке, но не улетает бесконечно (decay < 1 тянет обратно к 0).
+      var driftY = makeDrifter(jit.yStepPx, 0.85);
+      var driftAngle = makeDrifter(jit.angleStepDeg, 0.85);
+
       var x = geo.leftPx;
-      var spaceWidth = ctx.measureText(" ").width;
-      words.forEach(function (w) {
-        var wWidth = ctx.measureText(w).width;
-        var angle = (Math.random() - 0.5) * 2 * jit.angleDeg * Math.PI / 180;
-        var dy = (Math.random() - 0.5) * 2 * jit.yPx;
-        var lightness = 1 - Math.random() * 0.12;
-        ctx.save();
-        ctx.translate(x, y + dy);
-        ctx.rotate(angle);
-        ctx.fillStyle = shade(baseColor, lightness);
-        ctx.fillText(w, 0, 0);
-        ctx.restore();
-        x += wWidth + spaceWidth;
+      words.forEach(function (word, wIdx) {
+        for (var i = 0; i < word.length; i++) {
+          var ch = word[i];
+          var sizeScale = 1 + (Math.random() - 0.5) * 2 * jit.sizeJitter;
+          var chFontPx = fontSizePx * sizeScale;
+          ctx.font = chFontPx + "px " + state.font;
+
+          var dy = driftY();
+          var angle = driftAngle() * Math.PI / 180;
+          var lightness = 1 - Math.random() * 0.14;
+
+          ctx.save();
+          ctx.translate(x, y + dy);
+          ctx.rotate(angle);
+          ctx.fillStyle = shade(baseColor, lightness);
+          ctx.fillText(ch, 0, 0);
+          ctx.restore();
+
+          var chWidth = ctx.measureText(ch).width;
+          x += chWidth + (Math.random() - 0.5) * 2 * jit.kerningJitterPx;
+        }
+        if (wIdx < words.length - 1) {
+          x += spaceWidthBase + (Math.random() - 0.5) * jit.kerningJitterPx;
+        }
       });
       y += geo.lineStepPx;
     });
@@ -721,7 +753,9 @@
     if (document.fonts && document.fonts.ready) {
       Promise.all([
         document.fonts.load("40px Neucha"),
-        document.fonts.load("40px 'Marck Script'")
+        document.fonts.load("40px 'Marck Script'"),
+        document.fonts.load("40px Comforter"),
+        document.fonts.load("40px 'Comforter Brush'")
       ]).catch(function () {}).then(function () {
         document.fonts.ready.then(render);
       });
