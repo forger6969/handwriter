@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Рукописный лист</title>
+<meta name="description" content="Печатаешь текст — получаешь картинку рукописного конспекта на тетрадном или А4 листе с реальными пропорциями, готовую к скачиванию.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Neucha&family=Marck+Script&family=Manrope:wght@400;500;600;700;800&display=swap">
+<style>
+  :root {
+    --bg: #eef1f6;
+    --surface: #ffffff;
+    --surface-2: #f5f7fa;
+    --border: #d7dce3;
+    --text: #1f2530;
+    --text-muted: #667085;
+    --accent: #3a6ea5;
+    --accent-ink: #2f5a86;
+    --accent-soft: #e4edf7;
+    --danger: #c0524a;
+
+    --paper: #fdfbf3;
+    --paper-shadow: rgba(30, 41, 59, .18);
+    --grid-line: #a9c6e3;
+    --margin-line: #cf6d6d;
+
+    --ink-blue: #1e3a5f;
+    --ink-black: #1c1c1c;
+    --ink-violet: #4a3a6b;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #13161c;
+      --surface: #1b1f27;
+      --surface-2: #20242e;
+      --border: #2c3341;
+      --text: #e7eaf0;
+      --text-muted: #909aab;
+      --accent: #6ea3d8;
+      --accent-ink: #8ab6e6;
+      --accent-soft: #223247;
+      --paper-shadow: rgba(0, 0, 0, .5);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #13161c;
+    --surface: #1b1f27;
+    --surface-2: #20242e;
+    --border: #2c3341;
+    --text: #e7eaf0;
+    --text-muted: #909aab;
+    --accent: #6ea3d8;
+    --accent-ink: #8ab6e6;
+    --accent-soft: #223247;
+    --paper-shadow: rgba(0, 0, 0, .5);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Manrope", system-ui, sans-serif;
+    margin: 0;
+    padding: 20px 16px 40px;
+  }
+
+  h1 {
+    font-size: 20px;
+    font-weight: 800;
+    margin: 0 0 2px;
+    letter-spacing: -.01em;
+  }
+  .subtitle {
+    color: var(--text-muted);
+    font-size: 13px;
+    margin: 0 0 20px;
+    max-width: 60ch;
+  }
+
+  .app {
+    display: grid;
+    grid-template-columns: minmax(260px, 340px) 1fr;
+    gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+    align-items: start;
+  }
+  @media (max-width: 760px) {
+    .app { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .field { display: flex; flex-direction: column; gap: 7px; }
+  .field label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--text-muted);
+  }
+  textarea {
+    width: 100%;
+    min-height: 160px;
+    resize: vertical;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    color: var(--text);
+    font: 14px/1.5 "Manrope", sans-serif;
+  }
+  textarea:focus, select:focus, button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  .seg {
+    display: flex;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 3px;
+    gap: 3px;
+  }
+  .seg button {
+    flex: 1;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font: 600 12.5px "Manrope", sans-serif;
+    padding: 8px 6px;
+    border-radius: 7px;
+    cursor: pointer;
+  }
+  .seg button.active {
+    background: var(--surface);
+    color: var(--accent-ink);
+    box-shadow: 0 1px 2px rgba(0,0,0,.08);
+  }
+
+  select {
+    width: 100%;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 9px 10px;
+    color: var(--text);
+    font: 13.5px "Manrope", sans-serif;
+  }
+
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  .swatches { display: flex; gap: 8px; }
+  .swatch {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .swatch.active { border-color: var(--accent); }
+  .swatch i { width: 18px; height: 18px; border-radius: 50%; display: block; }
+
+  input[type=range] {
+    width: 100%;
+    accent-color: var(--accent);
+  }
+  .range-val {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .dims-hint {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  .preview-col {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+  .page-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .page-card canvas {
+    max-width: 100%;
+    height: auto;
+    border-radius: 3px;
+    box-shadow: 0 10px 30px var(--paper-shadow);
+  }
+  .page-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12.5px;
+    color: var(--text-muted);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 9px;
+    padding: 8px 14px;
+    font: 700 12.5px "Manrope", sans-serif;
+    cursor: pointer;
+  }
+  .btn:disabled { opacity: .55; cursor: default; }
+  .btn.ghost {
+    background: transparent;
+    color: var(--accent-ink);
+    border: 1px solid var(--border);
+  }
+
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 22px;
+    transform: translateX(-50%) translateY(12px);
+    background: var(--text);
+    color: var(--surface);
+    padding: 9px 16px;
+    border-radius: 9px;
+    font-size: 12.5px;
+    font-weight: 600;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s ease, transform .2s ease;
+    z-index: 20;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .empty-note {
+    font-size: 12px;
+    color: var(--text-muted);
+    padding: 10px 12px;
+    background: var(--accent-soft);
+    border-radius: 9px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Рукописный лист</h1>
+<p class="subtitle">Печатаешь текст — получаешь картинку с рукописным почерком на тетрадном листе или А4, с настоящими пропорциями бумаги. Скачивается как PNG.</p>
+
+<div class="app">
+  <div class="panel">
+    <div class="field">
+      <label for="text-input">Текст</label>
+      <textarea id="text-input" spellcheck="false"></textarea>
+    </div>
+
+    <div class="field">
+      <label>Тип листа</label>
+      <div class="seg" id="paper-seg">
+        <button data-val="a4">А4</button>
+        <button data-val="single">Тетрадь</button>
+        <button data-val="double">Тетрадь (разворот)</button>
+      </div>
+      <div class="dims-hint" id="dims-hint"></div>
+    </div>
+
+    <div class="field">
+      <label>Разлиновка</label>
+      <div class="seg" id="pattern-seg">
+        <button data-val="grid">Клетка</button>
+        <button data-val="lines">Линейка</button>
+        <button data-val="blank">Чистый</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="font-select">Почерк</label>
+      <select id="font-select">
+        <option value="Neucha">Школьный (Neucha)</option>
+        <option value="'Marck Script'">Аккуратный (Marck Script)</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Цвет чернил</label>
+      <div class="swatches" id="ink-swatches">
+        <span class="swatch active" data-val="blue"><i style="background:#1e3a5f"></i></span>
+        <span class="swatch" data-val="black"><i style="background:#1c1c1c"></i></span>
+        <span class="swatch" data-val="violet"><i style="background:#4a3a6b"></i></span>
+      </div>
+    </div>
+
+    <div class="row-2">
+      <div class="field">
+        <label>Размер букв</label>
+        <input type="range" id="size-range" min="70" max="140" value="100">
+        <div class="range-val"><span>мельче</span><span id="size-val">100%</span></div>
+      </div>
+      <div class="field">
+        <label>Небрежность</label>
+        <input type="range" id="jitter-range" min="0" max="100" value="45">
+        <div class="range-val"><span>ровно</span><span id="jitter-val">45%</span></div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="format-select">Формат картинок (постранично)</label>
+      <select id="format-select">
+        <option value="png">PNG</option>
+        <option value="jpeg">JPEG</option>
+      </select>
+    </div>
+
+    <button class="btn" id="pdf-all-btn" style="width:100%; justify-content:center">Скачать всё как PDF</button>
+  </div>
+
+  <div class="preview-col" id="preview-col"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var MM_PER_INCH = 25.4;
+  var DPI = 220;
+  var pxPerMm = DPI / MM_PER_INCH;
+
+  var PAPER = {
+    a4: { w: 210, h: 297, label: "А4", note: "210 × 297 мм — стандартный лист" },
+    single: { w: 170, h: 205, label: "Тетрадный лист", note: "170 × 205 мм — одна страница школьной тетради" },
+    double: { w: 340, h: 205, label: "Тетрадь (разворот)", note: "340 × 205 мм — двойной лист тетради, как раскрытая тетрадь" }
+  };
+
+  var INK = {
+    blue: "#1e3a5f",
+    black: "#1c1c1c",
+    violet: "#4a3a6b"
+  };
+
+  var state = {
+    text: "",
+    paper: "a4",
+    pattern: "grid",
+    font: "Neucha",
+    ink: "blue",
+    sizePct: 100,
+    jitterPct: 45
+  };
+
+  var DEFAULT_TEXT = "ЛАБОРАТОРНАЯ РАБОТА № 5\n\n1. Тема\nОпределение отношения теплоёмкостей газа Cp/Cv методом Клемана-Дезорма.\n\n2. Цель работы\nИзучение первого закона термодинамики, внутренней энергии газа и её выражения; ознакомление с удельной и молярной теплоёмкостями; экспериментальное определение коэффициента Пуассона для воздуха методом Клемана-Дезорма и сравнение полученного значения с теоретическим.\n\n3. Основные теоретические сведения\nСовокупность изучаемых тел называют системой. Идеальным газом называется газ, молекулы которого не взаимодействуют друг с другом. Состояние газа характеризуется тремя параметрами: давлением P, объёмом V и температурой T.";
+
+  var textInput = document.getElementById("text-input");
+  var dimsHint = document.getElementById("dims-hint");
+  var previewCol = document.getElementById("preview-col");
+  var toastEl = document.getElementById("toast");
+  var sizeVal = document.getElementById("size-val");
+  var jitterVal = document.getElementById("jitter-val");
+
+  textInput.value = DEFAULT_TEXT;
+  state.text = DEFAULT_TEXT;
+
+  function setSeg(containerId, key) {
+    var container = document.getElementById(containerId);
+    var buttons = container.querySelectorAll("button");
+    buttons.forEach(function (b) {
+      b.classList.toggle("active", b.dataset.val === state[key]);
+    });
+    container.addEventListener("click", function (e) {
+      var btn = e.target.closest("button");
+      if (!btn) return;
+      state[key] = btn.dataset.val;
+      buttons.forEach(function (b) { b.classList.toggle("active", b === btn); });
+      render();
+    });
+  }
+  setSeg("paper-seg", "paper");
+  setSeg("pattern-seg", "pattern");
+
+  var inkSwatches = document.getElementById("ink-swatches");
+  inkSwatches.addEventListener("click", function (e) {
+    var el = e.target.closest(".swatch");
+    if (!el) return;
+    state.ink = el.dataset.val;
+    inkSwatches.querySelectorAll(".swatch").forEach(function (s) {
+      s.classList.toggle("active", s === el);
+    });
+    render();
+  });
+
+  document.getElementById("font-select").addEventListener("change", function (e) {
+    state.font = e.target.value;
+    render();
+  });
+
+  var sizeRange = document.getElementById("size-range");
+  sizeRange.addEventListener("input", function () {
+    state.sizePct = parseInt(sizeRange.value, 10);
+    sizeVal.textContent = state.sizePct + "%";
+    render();
+  });
+
+  var jitterRange = document.getElementById("jitter-range");
+  jitterRange.addEventListener("input", function () {
+    state.jitterPct = parseInt(jitterRange.value, 10);
+    jitterVal.textContent = state.jitterPct + "%";
+    render();
+  });
+
+  var textDebounce = null;
+  textInput.addEventListener("input", function () {
+    state.text = textInput.value;
+    clearTimeout(textDebounce);
+    textDebounce = setTimeout(render, 220);
+  });
+
+  function showToast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    setTimeout(function () { toastEl.classList.remove("show"); }, 2600);
+  }
+
+  // ---- геометрия страницы ----
+  function pageGeometry() {
+    var p = PAPER[state.paper];
+    var wPx = Math.round(p.w * pxPerMm);
+    var hPx = Math.round(p.h * pxPerMm);
+
+    var topMm = 12, bottomMm = 12, rightMm = 10;
+    var leftMm = state.paper === "a4" ? 18 : 20;
+    var hasRedLine = state.paper !== "a4";
+
+    var cellMm = 5;
+    var ruleMm = 8;
+    var lineStepMm = state.pattern === "grid" ? cellMm * 2 : (state.pattern === "lines" ? ruleMm : ruleMm * 1.05);
+
+    return {
+      wPx: wPx, hPx: hPx,
+      wMm: p.w, hMm: p.h,
+      leftPx: leftMm * pxPerMm, rightPx: rightMm * pxPerMm,
+      topPx: topMm * pxPerMm, bottomPx: bottomMm * pxPerMm,
+      cellPx: cellMm * pxPerMm,
+      ruleStepPx: ruleMm * pxPerMm,
+      lineStepPx: lineStepMm * pxPerMm,
+      hasRedLine: hasRedLine,
+      redLineXPx: leftMm * pxPerMm - 6 * pxPerMm
+    };
+  }
+
+  function drawBackground(ctx, geo) {
+    ctx.fillStyle = "#fdfbf3";
+    ctx.fillRect(0, 0, geo.wPx, geo.hPx);
+
+    if (state.pattern === "grid") {
+      ctx.strokeStyle = "#a9c6e3";
+      ctx.lineWidth = Math.max(1, pxPerMm * 0.06);
+      for (var x = geo.cellPx; x < geo.wPx; x += geo.cellPx) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, geo.hPx); ctx.stroke();
+      }
+      for (var y = geo.cellPx; y < geo.hPx; y += geo.cellPx) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(geo.wPx, y); ctx.stroke();
+      }
+    } else if (state.pattern === "lines") {
+      ctx.strokeStyle = "#a9c6e3";
+      ctx.lineWidth = Math.max(1, pxPerMm * 0.06);
+      for (var yy = geo.topPx; yy < geo.hPx - geo.bottomPx + geo.ruleStepPx; yy += geo.ruleStepPx) {
+        ctx.beginPath(); ctx.moveTo(0, yy); ctx.lineTo(geo.wPx, yy); ctx.stroke();
+      }
+    }
+
+    if (geo.hasRedLine) {
+      ctx.strokeStyle = "#cf6d6d";
+      ctx.lineWidth = Math.max(1.2, pxPerMm * 0.09);
+      ctx.beginPath();
+      ctx.moveTo(geo.redLineXPx, 0);
+      ctx.lineTo(geo.redLineXPx, geo.hPx);
+      ctx.stroke();
+    }
+
+    if (state.paper === "double") {
+      ctx.strokeStyle = "rgba(0,0,0,.10)";
+      ctx.lineWidth = pxPerMm * 0.15;
+      ctx.beginPath();
+      ctx.moveTo(geo.wPx / 2, 0);
+      ctx.lineTo(geo.wPx / 2, geo.hPx);
+      ctx.stroke();
+    }
+  }
+
+  function baseFontSizePx(geo) {
+    var mm = (state.pattern === "grid" ? 8 : 6.2) * (state.sizePct / 100);
+    return mm * pxPerMm;
+  }
+
+  function inkColor() { return INK[state.ink]; }
+
+  function jitterAmounts() {
+    var f = state.jitterPct / 100;
+    return {
+      angleDeg: f * 2.6,
+      yPx: f * 3.2 * pxPerMm / 3,
+      shrink: f * 0.05
+    };
+  }
+
+  // ---- разбиение текста на строки с учётом ширины ----
+  function wrapParagraph(ctx, words, maxWidth) {
+    var lines = [];
+    var current = [];
+    var currentWidth = 0;
+    var spaceWidth = ctx.measureText(" ").width;
+    words.forEach(function (w) {
+      var ww = ctx.measureText(w).width;
+      var extra = current.length ? spaceWidth : 0;
+      if (current.length && currentWidth + extra + ww > maxWidth) {
+        lines.push(current);
+        current = [w];
+        currentWidth = ww;
+      } else {
+        current.push(w);
+        currentWidth += extra + ww;
+      }
+    });
+    if (current.length) lines.push(current);
+    return lines;
+  }
+
+  function buildLines(ctx, geo, fontSizePx) {
+    ctx.font = fontSizePx + "px " + state.font;
+    var maxWidth = geo.wPx - geo.leftPx - geo.rightPx;
+    var paragraphs = state.text.split(/\n/);
+    var lines = [];
+    paragraphs.forEach(function (para) {
+      if (para.trim() === "") { lines.push([]); return; }
+      var words = para.split(/\s+/).filter(Boolean);
+      wrapParagraph(ctx, words, maxWidth).forEach(function (l) { lines.push(l); });
+    });
+    return lines;
+  }
+
+  function paginate(lines, geo) {
+    var usableH = geo.hPx - geo.topPx - geo.bottomPx;
+    var perPage = Math.max(1, Math.floor(usableH / geo.lineStepPx));
+    var pages = [];
+    for (var i = 0; i < lines.length; i += perPage) {
+      pages.push(lines.slice(i, i + perPage));
+    }
+    if (pages.length === 0) pages.push([]);
+    return pages;
+  }
+
+  function drawPage(canvas, geo, fontSizePx, pageLines) {
+    canvas.width = geo.wPx;
+    canvas.height = geo.hPx;
+    var ctx = canvas.getContext("2d");
+    drawBackground(ctx, geo);
+
+    ctx.font = fontSizePx + "px " + state.font;
+    ctx.textBaseline = "alphabetic";
+
+    var jit = jitterAmounts();
+    var baseColor = inkColor();
+    var y = geo.topPx + fontSizePx * 0.78;
+
+    pageLines.forEach(function (words) {
+      if (words.length === 0) { y += geo.lineStepPx; return; }
+      var x = geo.leftPx;
+      var spaceWidth = ctx.measureText(" ").width;
+      words.forEach(function (w) {
+        var wWidth = ctx.measureText(w).width;
+        var angle = (Math.random() - 0.5) * 2 * jit.angleDeg * Math.PI / 180;
+        var dy = (Math.random() - 0.5) * 2 * jit.yPx;
+        var lightness = 1 - Math.random() * 0.12;
+        ctx.save();
+        ctx.translate(x, y + dy);
+        ctx.rotate(angle);
+        ctx.fillStyle = shade(baseColor, lightness);
+        ctx.fillText(w, 0, 0);
+        ctx.restore();
+        x += wWidth + spaceWidth;
+      });
+      y += geo.lineStepPx;
+    });
+  }
+
+  function shade(hex, factor) {
+    var r = parseInt(hex.slice(1, 3), 16);
+    var g = parseInt(hex.slice(3, 5), 16);
+    var b = parseInt(hex.slice(5, 7), 16);
+    r = Math.min(255, Math.round(r * (2 - factor)));
+    g = Math.min(255, Math.round(g * (2 - factor)));
+    b = Math.min(255, Math.round(b * (2 - factor)));
+    return "rgb(" + r + "," + g + "," + b + ")";
+  }
+
+  // Backend deployed as a separate Render service — see README.
+  var BACKEND_URL = "https://handwriter-api.onrender.com";
+
+  function downloadBlob(blob, filename) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+  }
+
+  function attachDownload(btn, canvas, idx) {
+    btn.addEventListener("click", function () {
+      var format = document.getElementById("format-select").value; // png | jpeg
+      var mime = format === "jpeg" ? "image/jpeg" : "image/png";
+      canvas.toBlob(function (blob) {
+        if (!blob) { showToast("Не удалось подготовить файл"); return; }
+        downloadBlob(blob, "rukopisny-list-" + (idx + 1) + "." + format);
+      }, mime, format === "jpeg" ? 0.92 : undefined);
+    });
+  }
+
+  var currentPages = []; // { canvas, geo }
+
+  function canvasToPngDataUrl(canvas) {
+    return canvas.toDataURL("image/png");
+  }
+
+  var pdfAllBtn = document.getElementById("pdf-all-btn");
+  pdfAllBtn.addEventListener("click", function () {
+    if (currentPages.length === 0) return;
+    pdfAllBtn.disabled = true;
+    pdfAllBtn.textContent = "Собираю PDF…";
+
+    var payload = {
+      filename: "rukopisny-list",
+      pages: currentPages.map(function (p) {
+        return { dataUrl: canvasToPngDataUrl(p.canvas), widthMm: p.geo.wMm, heightMm: p.geo.hMm };
+      })
+    };
+
+    fetch(BACKEND_URL + "/api/pdf", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    })
+      .then(function (res) {
+        if (!res.ok) throw new Error("bad status " + res.status);
+        return res.blob();
+      })
+      .then(function (blob) {
+        downloadBlob(blob, "rukopisny-list.pdf");
+        showToast("PDF готов");
+      })
+      .catch(function () {
+        showToast("Не удалось собрать PDF — сервер спит, попробуй ещё раз через 30 сек");
+      })
+      .finally(function () {
+        pdfAllBtn.disabled = false;
+        pdfAllBtn.textContent = "Скачать всё как PDF";
+      });
+  });
+
+  var measureCtx = document.createElement("canvas").getContext("2d");
+
+  function render() {
+    var geo = pageGeometry();
+    dimsHint.textContent = PAPER[state.paper].note + (geo.hasRedLine ? " · красная поля-линия" : "");
+
+    var fontSizePx = baseFontSizePx(geo);
+    var lines = buildLines(measureCtx, geo, fontSizePx);
+    var pages = paginate(lines, geo);
+
+    previewCol.innerHTML = "";
+    currentPages = [];
+    pages.forEach(function (pageLines, idx) {
+      var card = document.createElement("div");
+      card.className = "page-card";
+
+      var canvas = document.createElement("canvas");
+      drawPage(canvas, geo, fontSizePx, pageLines);
+      card.appendChild(canvas);
+      currentPages.push({ canvas: canvas, geo: geo });
+
+      var meta = document.createElement("div");
+      meta.className = "page-meta";
+      var label = document.createElement("span");
+      label.textContent = "Страница " + (idx + 1) + " из " + pages.length + " · " + PAPER[state.paper].label;
+      var btn = document.createElement("button");
+      btn.className = "btn";
+      btn.textContent = "Скачать картинку";
+      attachDownload(btn, canvas, idx);
+      meta.appendChild(label);
+      meta.appendChild(btn);
+      card.appendChild(meta);
+
+      previewCol.appendChild(card);
+    });
+  }
+
+  function ready() {
+    if (document.fonts && document.fonts.ready) {
+      Promise.all([
+        document.fonts.load("40px Neucha"),
+        document.fonts.load("40px 'Marck Script'")
+      ]).catch(function () {}).then(function () {
+        document.fonts.ready.then(render);
+      });
+    } else {
+      render();
+    }
+  }
+  ready();
+})();
+</script>
+</body>
+</html>
